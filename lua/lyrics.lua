@@ -63,7 +63,12 @@ local function reverse_scrape_url(url)
 	end)
 	return artist, song
 end
-
+local function expand_home(path)
+	if path:sub(1, 2) == "~/" then
+		return os.getenv("HOME") .. path:sub(2)
+	end
+	return path
+end
 local function parse_first_line(buf)
 	local line = vim.api.nvim_buf_get_lines(buf, 0, 1, false)[1]
 
@@ -95,8 +100,8 @@ local function fetch_lyrics(artist, song, url, is_mocked)
 		cmd = { "uv", "run", "src/main.py", "--artist", artist, "--title", song }
 	end
 
-	print(M.config.lyrics_fetcher_path)
-	local result = vim.system(cmd, { text = true, cwd = M.config.lyrics_fetcher_path }):wait()
+	local path = expand_home(M.config.lyrics_fetcher_path)
+	local result = vim.system(cmd, { text = true, cwd = path }):wait()
 	-- local result = vim.system(cmd, { text = true, cwd = "/home/xouzoura/code/python/me/lyrics" }):wait()
 
 	if result.code ~= 0 then
