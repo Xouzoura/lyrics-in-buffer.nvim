@@ -1,16 +1,17 @@
 local M = {}
+local open_buff -- i will just use one buffer and overwrite it.
 
 -- load the initial configs
 local config_module = require("config")
 local keys = require("keys")
+local pattern = "^(.-)%s%-%s(.-)$" -- i expect the song to be <blink-182 - Always>
+
 M.config = config_module.config
 function M.setup(user_config)
 	for k, v in pairs(user_config or {}) do
 		M.config[k] = v
 	end
 end
-print(M.config.lyrics_fetcher_path)
--- local is_mock = false
 local is_mock = M.config.is_mock
 
 -- start
@@ -42,7 +43,8 @@ local function reverse_scrape_url(url)
 	end
 
 	local parts = {}
-	for p in slug:gmatch("[^%-]+") do
+	-- for p in slug:gmatch("[^%-]+") do
+	for p in slug:gmatch(pattern) do
 		table.insert(parts, p)
 	end
 
@@ -158,7 +160,11 @@ function M._first_line(metadata)
 end
 
 function M.open_buffer(metadata, lyrics_lines)
+	if open_buff and vim.api.nvim_buf_is_valid(open_buff) then
+		vim.api.nvim_buf_delete(open_buff, { force = true })
+	end
 	local buf = vim.api.nvim_create_buf(false, true)
+	open_buff = buf
 	keys.set_keys(buf)
 
 	-- write lines: first row = metadata
@@ -216,7 +222,8 @@ function M.get_playing_song_from_cache()
 	local now = os.time()
 	local ts, playing, meta = read_cache()
 	if playing and (now - ts <= 10) then
-		local artist, song = meta:match("^(.-)%s*%-%s*(.+)$")
+		-- local artist, song = meta:match("^(.-)%s*%-%s*(.+)$")
+		local artist, song = meta:match(pattern)
 
 		if not artist or not song then
 			return nil, nil
@@ -226,15 +233,15 @@ function M.get_playing_song_from_cache()
 		song = song:gsub("^%s+", ""):gsub("%s+$", "")
 		return artist, song
 	else
-		-- return "Radiohead", "Creep" -- #TODO: remove
 		return "", ""
 	end
 end
 function M.get_current_song()
 	local artist, song = M.get_playing_song_from_cache()
 	if not artist or not song then
-		log_info("No song found to be playing in the cache.")
+		log_info("[lyrics] No song found to be playing in the cache.")
 	end
+	log_info("[lyrics] Will look for " .. artist .. " - " .. song)
 	local result, metadata = M.get_lyrics_by_artist_song(artist, song)
 	M.open_buffer(metadata, result)
 end
