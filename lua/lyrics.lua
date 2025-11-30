@@ -239,9 +239,9 @@ end
 function M.get_current_song()
 	local artist, song = M.get_playing_song_from_cache()
 	if not artist or not song then
-		log_info("[lyrics] No song found to be playing in the cache.")
+		log_info("No song found to be playing in the cache.")
 	end
-	log_info("[lyrics] Will look for " .. artist .. " - " .. song)
+	log_info("Will look for " .. artist .. " - " .. song)
 	local result, metadata = M.get_lyrics_by_artist_song(artist, song)
 	M.open_buffer(metadata, result)
 end
