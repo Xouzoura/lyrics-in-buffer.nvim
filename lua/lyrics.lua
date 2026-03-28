@@ -189,7 +189,9 @@ function M.open_buffer(metadata, lyrics_lines)
 end
 
 function M.get_lyrics_by_artist_song(artist, song)
-	local _, lyrics = fetch_lyrics(artist, song, nil, is_mock)
+	local s = slugify(song)
+	local a = slugify(artist)
+	local _, lyrics = fetch_lyrics(a, s, nil, is_mock)
 	local url = build_scrape_url(artist, song)
 	local metadata = { artist = artist, song = song, url = url }
 	return lyrics, metadata
@@ -210,21 +212,18 @@ local function read_cache()
 
 	local f = io.open(cache_file, "r")
 	if not f then
-		return 0, "", ""
+		return 0, "", "", "", ""
 	end
 	local line = f:read("*l") or ""
 	f:close()
-	local ts, status, meta = line:match("^(%d+)|([^|]*)|(.*)$")
-	return tonumber(ts) or 0, status or "", meta or ""
+	local ts, status, artist, title, album = line:match("^(%d+)|(.-)|([^|]*)|([^|]*)|([^|]*)$")
+	return tonumber(ts) or 0, status or "", artist or "", title or "", album or ""
 end
 
 function M.get_playing_song_from_cache()
 	local now = os.time()
-	local ts, playing, meta = read_cache()
+	local ts, playing, artist, song, _ = read_cache()
 	if playing and (now - ts <= 10) then
-		-- local artist, song = meta:match("^(.-)%s*%-%s*(.+)$")
-		local artist, song = meta:match(pattern)
-
 		if not artist or not song then
 			return nil, nil
 		end
